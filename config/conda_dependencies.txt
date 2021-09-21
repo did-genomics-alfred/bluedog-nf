@@ -1,4 +1,10 @@
 samtools=1.11
 unicycler=0.4.8
 nextflow=21.04.0
-biopython=1.79
+biopython=1.77
+fastqc=0.11.9
+multiqc=1.11
+
+# can't install kleborate via conda
+#kleborate=2.1.0
+#blast=2.11.0
