@@ -1,8 +1,7 @@
 #!/usr/bin/env nextflow
 
-//ADD KLEBORATE, ABRITAMR, PROKKA ALTERNATIVE, POSSIBLY SPECIES DETECTOR
+//ADD ABRITAMR, PROKKA ALTERNATIVE, POSSIBLY SPECIES DETECTOR
 //WORK OUT A WAY TO PROVIDE ASSEMBLIES AS INPUT ALTERNATIVE
-//FASTQC STATS
 
 nextflow.enable.dsl=2
 
@@ -48,6 +47,7 @@ workflow {
 }
 
 process FASTQC {
+  label "short_job"
   cache 'lenient'
 
   input:
@@ -63,6 +63,7 @@ process FASTQC {
 }
 
 process MULTIQC {
+  label "short_job"
   cache 'lenient'
   publishDir path: {"${params.output_dir}"}, mode: 'copy', saveAs: {filename -> "multiQC_report.txt"}
 
