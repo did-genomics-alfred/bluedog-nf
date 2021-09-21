@@ -30,15 +30,21 @@ workflow {
   }
 
   //fastqc
-  fastqc_ch = FASTQC(reads_pe)
-  MULTIQC(fastqc_ch.collect())
+  if( params.read_qc ) {
+    fastqc_ch = FASTQC(reads_pe)
+    MULTIQC(fastqc_ch.collect())
+  }
+
   //run the assembly process
   assembly_ch = ASSEMBLE(reads_pe)
   stats_ch = STATS(assembly_ch)
   COMBINE(stats_ch.collect())
 
-  //view the output
-  //ASSEMBLE.out.view()
+  if (params.run_kleborate) {
+    kleborate_ch = KLEBORATE(assembly_ch)
+    COMBINE_KLEB(kleborate_ch.collect())
+  }
+
 }
 
 process FASTQC {
@@ -92,6 +98,7 @@ process ASSEMBLE {
 }
 
 process STATS {
+  label "short_job"
   cache 'lenient'
   publishDir path:{"${params.output_dir}/stats"}, mode: 'copy', saveAs: {filename -> "${isolate_id}_stats.txt"}, pattern: '*.txt'
 
@@ -108,6 +115,7 @@ process STATS {
 }
 
 process COMBINE {
+  label "short_job"
   cache 'lenient'
   publishDir path:("${params.output_dir}"), mode: 'copy'
 
@@ -120,5 +128,38 @@ process COMBINE {
   script:
   """
   awk 'FNR==1 && NR!=1 { while (/^assembly/) getline; } 1 {print}' *_stats.txt > assembly_stats.txt
+  """
+}
+
+process KLEBORATE {
+  label "short_job"
+  cache 'lenient'
+
+  input:
+  tuple val(isolate_id), file(fasta_file), file(graph_file), file(unicycler_log)
+
+  output:
+  path("*_results.txt")
+
+  script:
+  """
+  /Users/jane/Documents/assembly_pipe_dsl2/Kleborate/kleborate-runner.py --resistance -o ${isolate_id}_results.txt -a $fasta_file
+  """
+}
+
+process COMBINE_KLEB {
+  label "short_job"
+  cache 'lenient'
+  publishDir path:("${params.output_dir}"), mode: 'copy'
+
+  input:
+  path("*_results.txt")
+
+  output:
+  file("kleborate_results.txt")
+
+  script:
+  """
+  awk 'FNR==1 && NR!=1 { while (/^strain/) getline; } 1 {print}' *_results.txt > kleborate_results.txt
   """
 }
