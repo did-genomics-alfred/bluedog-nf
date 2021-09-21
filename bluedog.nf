@@ -27,7 +27,8 @@ workflow {
 
   //run the assembly process
   assembly_ch = ASSEMBLE(reads_pe)
-  STATS(assembly_ch)
+  stats_ch = STATS(assembly_ch)
+  COMBINE(stats_ch.collect())
 
   //view the output
   //ASSEMBLE.out.view()
@@ -65,5 +66,21 @@ process STATS {
   script:
   """
   assembly_stats.py -a $fasta_file --id $isolate_id > ${isolate_id}_stats.txt
+  """
+}
+
+process COMBINE {
+  cache 'lenient'
+  publishDir path:("${params.output_dir}"), mode: 'copy'
+
+  input:
+  file("*_stats.txt")
+
+  output:
+  file('assembly_stats.txt')
+
+  script:
+  """
+  awk 'FNR==1 && NR!=1 { while (/^assembly/) getline; } 1 {print}' *_stats.txt > assembly_stats.txt
   """
 }
