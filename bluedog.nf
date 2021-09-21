@@ -29,6 +29,9 @@ workflow {
     [it[0], *it[1]]
   }
 
+  //fastqc
+  fastqc_ch = FASTQC(reads_pe)
+  MULTIQC(fastqc_ch.collect())
   //run the assembly process
   assembly_ch = ASSEMBLE(reads_pe)
   stats_ch = STATS(assembly_ch)
@@ -36,6 +39,37 @@ workflow {
 
   //view the output
   //ASSEMBLE.out.view()
+}
+
+process FASTQC {
+  cache 'lenient'
+
+  input:
+  tuple val(isolate_id), path(reads_fwd), path(reads_rev)
+
+  output:
+  path("*.zip")
+
+  script:
+  """
+  fastqc --noextract $reads_fwd $reads_rev
+  """
+}
+
+process MULTIQC {
+  cache 'lenient'
+  publishDir path: {"${params.output_dir}"}, mode: 'copy', saveAs: {filename -> "multiQC_report.txt"}
+
+  input:
+  path("*")
+
+  output:
+  path("multiqc_data/multiqc_fastqc.txt")
+
+  script:
+  """
+  multiqc --force .
+  """
 }
 
 process ASSEMBLE {
