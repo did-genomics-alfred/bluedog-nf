@@ -131,6 +131,16 @@ process COMBINE {
   """
 }
 
+/* Need to comment out the following lines for Kleborate as Kleborate usings the fasta file name
+to determine the identifier that goes in the output file.
+As we are using the raw assembly.fasta outputs from unicycler, all entries when combined are called
+"assembly", which is obviously extremely unhelpful! So not using this for now until we work this out
+
+Additionally, it is not possible to install Kleborate via conda, due to the reliance on Kaptive.
+Therefore the bluedog environment on M3 will need to have Kleborate installed manually if we want to include this
+*/
+
+/*
 process KLEBORATE {
   label "short_job"
   cache 'lenient'
@@ -163,3 +173,4 @@ process COMBINE_KLEB {
   awk 'FNR==1 && NR!=1 { while (/^strain/) getline; } 1 {print}' *_results.txt > kleborate_results.txt
   """
 }
+*/
