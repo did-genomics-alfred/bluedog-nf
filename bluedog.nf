@@ -26,7 +26,8 @@ workflow {
   }
 
   //run the assembly process
-  ASSEMBLE(reads_pe)
+  assembly_ch = ASSEMBLE(reads_pe)
+  STATS(assembly_ch)
 
   //view the output
   //ASSEMBLE.out.view()
@@ -42,11 +43,27 @@ process ASSEMBLE {
   tuple val(isolate_id), path(reads_fwd), path(reads_rev)
 
   output:
-  tuple val(isolate_id), path("assembly*"), path("unicycler.log")
+  tuple val(isolate_id), path("assembly.fasta")
 
   script:
   """
   unicycler -1 ${reads_fwd} -2 ${reads_rev} -o .
   """
 
+}
+
+process STATS {
+  cache 'lenient'
+  publishDir path:{"${params.output_dir}/stats"}, mode: 'copy', saveAs: {filename -> "${isolate_id}_stats.txt"}, pattern: '*.txt'
+
+  input:
+  tuple val(isolate_id), path(fasta_file)
+
+  output:
+  path("${isolate_id}_stats.txt")
+
+  script:
+  """
+  assembly_stats.py -a $fasta_file --id $isolate_id > ${isolate_id}_stats.txt
+  """
 }
