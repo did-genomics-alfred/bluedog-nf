@@ -1,5 +1,9 @@
 #!/usr/bin/env nextflow
 
+//ADD KLEBORATE, ABRITAMR, PROKKA ALTERNATIVE, POSSIBLY SPECIES DETECTOR
+//WORK OUT A WAY TO PROVIDE ASSEMBLIES AS INPUT ALTERNATIVE
+//FASTQC STATS
+
 nextflow.enable.dsl=2
 
 include { get_read_prefix_and_type } from './src/channel_helpers.nf'
@@ -37,14 +41,14 @@ workflow {
 process ASSEMBLE {
   cache 'lenient'
   publishDir path: {"${params.output_dir}/fasta"},  mode: 'copy', saveAs: {filename -> "${isolate_id}.fasta"}, pattern: '*.fasta'
-  publishDir path: {"${params.output_dir}/graph"}, mode: 'copy', saveAs: {filename -> "${isolate_id}.gfa"}, pattern: '*.gfa'
+  publishDir path: {"${params.output_dir}/graph"}, mode: 'copy', saveAs: {filename -> "${isolate_id}.gfa"}, pattern: 'assembly.gfa'
   publishDir path: {"${params.output_dir}/logs"}, mode: 'copy', saveAs: {filename -> "${isolate_id}_unicycler.log"}, pattern: '*.log'
 
   input:
   tuple val(isolate_id), path(reads_fwd), path(reads_rev)
 
   output:
-  tuple val(isolate_id), path("assembly.fasta")
+  tuple val(isolate_id), path("assembly.fasta"), path("assembly.gfa"), path("unicycler.log")
 
   script:
   """
@@ -58,7 +62,7 @@ process STATS {
   publishDir path:{"${params.output_dir}/stats"}, mode: 'copy', saveAs: {filename -> "${isolate_id}_stats.txt"}, pattern: '*.txt'
 
   input:
-  tuple val(isolate_id), path(fasta_file)
+  tuple val(isolate_id), path(fasta_file), path(graph_file), path(log_file)
 
   output:
   path("${isolate_id}_stats.txt")
