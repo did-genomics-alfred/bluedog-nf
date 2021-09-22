@@ -39,9 +39,14 @@ workflow {
   stats_ch = STATS(assembly_ch)
   COMBINE(stats_ch.collect())
 
-  if (params.run_kleborate) {
+  if ( params.run_kleborate ) {
     kleborate_ch = KLEBORATE(assembly_ch)
     COMBINE_KLEB(kleborate_ch.collect())
+  }
+
+  if ( params.run_mlst ) {
+    mlst_ch = MLST(assembly_ch)
+    COMBINE_MLST(mlst_ch)
   }
 
 }
@@ -129,6 +134,43 @@ process COMBINE {
   script:
   """
   awk 'FNR==1 && NR!=1 { while (/^assembly/) getline; } 1 {print}' *_stats.txt > assembly_stats.txt
+  """
+}
+
+process MLST {
+  label "short_job"
+  cache 'lenient'
+  publishDir path:("${params.output_dir}/mlst"), mode: 'copy', saveAs: {filename -> "${isolate_id}_mlst.txt"}, pattern: '*_mlst.txt'
+
+  input:
+  tuple val(isolate_id), path(fasta_file), path(graph_file), path(log_file)
+
+  output:
+  tuple path("${isolate_id}_mlst.txt"), path("${isolate_id}_ST.txt")
+
+  script:
+  """
+  mlst --label $isolate_id $fasta_file > ${isolate_id}_mlst.txt | cut -f1,2,3 > ${isolate_id}_ST.txt
+  """
+  //mlst --label $isolate_id $fasta_file > ${isolate_id}_mlst.txt
+  //select only the first 3 columns for the final combined output (keep the individual files for inspection)
+  //can't keep all columns as the mlst genes will differ depending on species
+}
+
+process COMBINE_MLST {
+  label "short_job"
+  cache 'lenient'
+  publishDir path:("${params.output_dir}"), mode: 'copy'
+
+  input:
+  tuple path("*_mlst.txt"), path("*_ST.txt")
+
+  output:
+  file("mlst_results.txt")
+
+  script:
+  """
+  cat *_ST.txt > mlst_results.txt
   """
 }
 
