@@ -5,215 +5,81 @@
 
 nextflow.enable.dsl=2
 
-include { get_read_prefix_and_type } from './src/channel_helpers.nf'
+include { get_read_prefix_and_type;get_file_id } from './src/channel_helpers.nf'
+include { fastqc;multiqc } from './src/processes/read_processes.nf'
+include { assemble;assembly_stats;combine_stats } from './src/processes/read_processes.nf'
 
-workflow {
+include { mlst;combine_mlst } from './src/processes/assembly_processes.nf'
+include {speciator} from './src/processes/assembly_processes.nf'
+
+// Get reads and seperate into pe and se channels based on prefix
+reads = Channel.fromPath(params.reads).map {
+    get_read_prefix_and_type(it)
+  }.branch {
+    paired: it[0] == 'pe'
+}
+reads_pe = reads.paired.map { it[1..-1] }.groupTuple()
+// Check that we have the expected number of reads for each prefix in pe and se channels and flatten tuple
+reads_pe = reads_pe.map {
+  if (it[1].size() != 2) {
+    exit 1, "ERROR: didn't get exactly two readsets prefixed with ${it[0]}:\n${it[1]}"
+  }
+  [it[0], *it[1]]
+}
+
+assemblies = Channel.fromPath(params.assemblies).map {
+  get_file_id(it)}
+
+workflow ASSEMBLE_FROM_READS {
   //get input data
-  read_pairs = Channel.fromFilePairs(params.reads)
-
-  // Get reads and seperate into pe and se channels based on prefix
-  reads = Channel.fromPath(params.reads).ifEmpty {
-      exit 1, "ERROR: did not find any read files with '${params.reads}'"
-    }.map {
-      get_read_prefix_and_type(it)
-    }.branch {
-      paired: it[0] == 'pe'
-  }
-  reads_pe = reads.paired.map { it[1..-1] }.groupTuple()
-  // Check that we have the expected number of reads for each prefix in pe and se channels and flatten tuple
-  reads_pe = reads_pe.map {
-    if (it[1].size() != 2) {
-      exit 1, "ERROR: didn't get exactly two readsets prefixed with ${it[0]}:\n${it[1]}"
-    }
-    [it[0], *it[1]]
-  }
-
+  take:
+  read_pairs_ch
+  main:
   //fastqc
   if( params.read_qc ) {
-    fastqc_ch = FASTQC(reads_pe)
-    MULTIQC(fastqc_ch.collect())
+    fastqc_ch = fastqc(reads_pe)
+    multiqc(fastqc_ch.collect())
   }
 
   //run the assembly process
-  assembly_ch = ASSEMBLE(reads_pe)
-  stats_ch = STATS(assembly_ch)
-  COMBINE(stats_ch.collect())
+  assemble(reads_pe)
+  stats_ch = assembly_stats(assemble.out.assembly_fasta)
+  combine_stats(stats_ch.collect())
 
+  emit:
+  assemble.out.assembly_fasta
+
+}
+
+workflow ANALYSE_ASSEMBLIES {
+  take:
+  assemblies_ch
+  main:
+  if (params.run_speciator) {
+    species_ch = speciator(assemblies_ch)
+    combine_species(species_ch.collect())
+  }
   if ( params.run_kleborate ) {
-    kleborate_ch = KLEBORATE(assembly_ch)
-    COMBINE_KLEB(kleborate_ch.collect())
+    kleborate_ch = kleborate(assemblies_ch)
+    combine_kleborate(kleborate_ch.collect())
   }
 
   if ( params.run_mlst ) {
-    mlst_ch = MLST(assembly_ch)
-    COMBINE_MLST(mlst_ch)
+    mlst_ch = mlst(assemblies_ch)
+    combine_mlst(mlst_ch)
   }
 
 }
 
-process FASTQC {
-  label "short_job"
-  cache 'lenient'
-
-  input:
-  tuple val(isolate_id), path(reads_fwd), path(reads_rev)
-
-  output:
-  path("*.zip")
-
-  script:
-  """
-  fastqc --noextract $reads_fwd $reads_rev
-  """
+//This is the implicit workflow that calls all the others
+workflow{
+  if (params.reads) {
+    ASSEMBLE_FROM_READS(reads_pe)
+    ANALYSE_ASSEMBLIES(ASSEMBLE_FROM_READS.out)
+  }
+  else {
+    ANALYSE_ASSEMBLIES(assemblies)
+    //reads_pe.view()
+    //assemblies.view()
+  }
 }
-
-process MULTIQC {
-  label "short_job"
-  cache 'lenient'
-  publishDir path: {"${params.output_dir}"}, mode: 'copy', saveAs: {filename -> "multiQC_report.txt"}
-
-  input:
-  path("*")
-
-  output:
-  path("multiqc_data/multiqc_fastqc.txt")
-
-  script:
-  """
-  multiqc --force .
-  """
-}
-
-process ASSEMBLE {
-  cache 'lenient'
-  publishDir path: {"${params.output_dir}/fasta"},  mode: 'copy', saveAs: {filename -> "${isolate_id}.fasta"}, pattern: '*.fasta'
-  publishDir path: {"${params.output_dir}/graph"}, mode: 'copy', saveAs: {filename -> "${isolate_id}.gfa"}, pattern: 'assembly.gfa'
-  publishDir path: {"${params.output_dir}/logs"}, mode: 'copy', saveAs: {filename -> "${isolate_id}_unicycler.log"}, pattern: '*.log'
-
-  input:
-  tuple val(isolate_id), path(reads_fwd), path(reads_rev)
-
-  output:
-  tuple val(isolate_id), path("assembly.fasta"), path("assembly.gfa"), path("unicycler.log")
-
-  script:
-  """
-  unicycler -1 ${reads_fwd} -2 ${reads_rev} -o .
-  """
-
-}
-
-process STATS {
-  label "short_job"
-  cache 'lenient'
-  publishDir path:{"${params.output_dir}/stats"}, mode: 'copy', saveAs: {filename -> "${isolate_id}_stats.txt"}, pattern: '*.txt'
-
-  input:
-  tuple val(isolate_id), path(fasta_file), path(graph_file), path(log_file)
-
-  output:
-  path("${isolate_id}_stats.txt")
-
-  script:
-  """
-  assembly_stats.py -a $fasta_file --id $isolate_id > ${isolate_id}_stats.txt
-  """
-}
-
-process COMBINE {
-  label "short_job"
-  cache 'lenient'
-  publishDir path:("${params.output_dir}"), mode: 'copy'
-
-  input:
-  file("*_stats.txt")
-
-  output:
-  file('assembly_stats.txt')
-
-  script:
-  """
-  awk 'FNR==1 && NR!=1 { while (/^assembly/) getline; } 1 {print}' *_stats.txt > assembly_stats.txt
-  """
-}
-
-process MLST {
-  label "short_job"
-  cache 'lenient'
-  publishDir path:("${params.output_dir}/mlst"), mode: 'copy', saveAs: {filename -> "${isolate_id}_mlst.txt"}, pattern: '*_mlst.txt'
-
-  input:
-  tuple val(isolate_id), path(fasta_file), path(graph_file), path(log_file)
-
-  output:
-  tuple path("${isolate_id}_mlst.txt"), path("${isolate_id}_ST.txt")
-
-  script:
-  """
-  mlst --label $isolate_id $fasta_file > ${isolate_id}_mlst.txt | cut -f1,2,3 > ${isolate_id}_ST.txt
-  """
-  //mlst --label $isolate_id $fasta_file > ${isolate_id}_mlst.txt
-  //select only the first 3 columns for the final combined output (keep the individual files for inspection)
-  //can't keep all columns as the mlst genes will differ depending on species
-}
-
-process COMBINE_MLST {
-  label "short_job"
-  cache 'lenient'
-  publishDir path:("${params.output_dir}"), mode: 'copy'
-
-  input:
-  tuple path("*_mlst.txt"), path("*_ST.txt")
-
-  output:
-  file("mlst_results.txt")
-
-  script:
-  """
-  cat *_ST.txt > mlst_results.txt
-  """
-}
-
-/* Need to comment out the following lines for Kleborate as Kleborate usings the fasta file name
-to determine the identifier that goes in the output file.
-As we are using the raw assembly.fasta outputs from unicycler, all entries when combined are called
-"assembly", which is obviously extremely unhelpful! So not using this for now until we work this out
-
-Additionally, it is not possible to install Kleborate via conda, due to the reliance on Kaptive.
-Therefore the bluedog environment on M3 will need to have Kleborate installed manually if we want to include this
-*/
-
-/*
-process KLEBORATE {
-  label "short_job"
-  cache 'lenient'
-
-  input:
-  tuple val(isolate_id), file(fasta_file), file(graph_file), file(unicycler_log)
-
-  output:
-  path("*_results.txt")
-
-  script:
-  """
-  /Users/jane/Documents/assembly_pipe_dsl2/Kleborate/kleborate-runner.py --resistance -o ${isolate_id}_results.txt -a $fasta_file
-  """
-}
-
-process COMBINE_KLEB {
-  label "short_job"
-  cache 'lenient'
-  publishDir path:("${params.output_dir}"), mode: 'copy'
-
-  input:
-  path("*_results.txt")
-
-  output:
-  file("kleborate_results.txt")
-
-  script:
-  """
-  awk 'FNR==1 && NR!=1 { while (/^strain/) getline; } 1 {print}' *_results.txt > kleborate_results.txt
-  """
-}
-*/

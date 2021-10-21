@@ -13,3 +13,9 @@ def get_read_prefix_and_type(filepath) {
   }
   return [read_type, matcher.group(1), filepath]
 }
+
+// Get the name of the isolate for each assembly file
+def get_file_id(filepath) {
+  file_id = filepath.getName().minus(".fasta")
+  return [file_id, filepath]
+}
