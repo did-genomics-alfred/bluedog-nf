@@ -58,24 +58,24 @@ Additionally, it is not possible to install Kleborate via conda, due to the reli
 Therefore the bluedog environment on M3 will need to have Kleborate installed manually if we want to include this
 */
 
-/*
-process KLEBORATE {
+
+process kleborate {
   label "short_job"
   cache 'lenient'
 
   input:
-  tuple val(isolate_id), file(fasta_file), file(graph_file), file(unicycler_log)
+  tuple val(isolate_id), file(fasta_file)
 
   output:
   path("*_results.txt")
 
   script:
   """
-  /Users/jane/Documents/assembly_pipe_dsl2/Kleborate/kleborate-runner.py --resistance -o ${isolate_id}_results.txt -a $fasta_file
+  kleborate --resistance -o ${isolate_id}_results.txt -a $fasta_file
   """
 }
 
-process COMBINE_KLEB {
+process combine_kleborate {
   label "short_job"
   cache 'lenient'
   publishDir path:("${params.output_dir}"), mode: 'copy'
@@ -91,4 +91,4 @@ process COMBINE_KLEB {
   awk 'FNR==1 && NR!=1 { while (/^strain/) getline; } 1 {print}' *_results.txt > kleborate_results.txt
   """
 }
-*/
+

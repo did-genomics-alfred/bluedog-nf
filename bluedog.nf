@@ -11,6 +11,7 @@ include { assemble;assembly_stats;combine_stats } from './src/processes/read_pro
 
 include { mlst;combine_mlst } from './src/processes/assembly_processes.nf'
 include {speciator} from './src/processes/assembly_processes.nf'
+include { kleborate;combine_kleborate } from './src/processes/assembly_processes.nf'
 
 // Get reads and seperate into pe and se channels based on prefix
 reads = Channel.fromPath(params.reads).map {
