@@ -14,6 +14,7 @@ include {speciator} from './src/processes/assembly_processes.nf'
 include { kleborate;combine_kleborate } from './src/processes/assembly_processes.nf'
 
 // Get reads and seperate into pe and se channels based on prefix
+if (params.reads) {
 reads = Channel.fromPath(params.reads).map {
     get_read_prefix_and_type(it)
   }.branch {
@@ -27,9 +28,11 @@ reads_pe = reads_pe.map {
   }
   [it[0], *it[1]]
 }
-
-assemblies = Channel.fromPath(params.assemblies).map {
-  get_file_id(it)}
+}
+if (params.assemblies){
+	assemblies = Channel.fromPath(params.assemblies).map {
+	  get_file_id(it)}
+}
 
 workflow ASSEMBLE_FROM_READS {
   //get input data

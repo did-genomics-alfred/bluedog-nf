@@ -4,11 +4,10 @@ process mlst {
   publishDir path:("${params.output_dir}/mlst"), mode: 'copy', saveAs: {filename -> "${isolate_id}_mlst.txt"}, pattern: '*_mlst.txt'
 
   input:
-  //tuple val(isolate_id), path(fasta_file), path(graph_file), path(log_file)
   tuple val(isolate_id), path(fasta_file)
 
   output:
-  path("{$isolate_id}_mlst.txt")
+  path("${isolate_id}_mlst.txt")
 
   script:
   """
@@ -62,16 +61,17 @@ Therefore the bluedog environment on M3 will need to have Kleborate installed ma
 process kleborate {
   label "short_job"
   cache 'lenient'
+  publishDir path:("${params.output_dir}/kleborate"), mode: 'copy', saveAs: {filename -> "${isolate_id}_kleborate.txt"}, pattern: '*_kleborate.txt'  
 
   input:
-  tuple val(isolate_id), file(fasta_file)
+  tuple val(isolate_id), path(fasta_file)
 
   output:
-  path("*_results.txt")
+  path("*_kleborate.txt")
 
   script:
   """
-  kleborate --resistance -o ${isolate_id}_results.txt -a $fasta_file
+  kleborate --resistance -o ${isolate_id}_kleborate.txt -a $fasta_file
   """
 }
 
@@ -81,14 +81,14 @@ process combine_kleborate {
   publishDir path:("${params.output_dir}"), mode: 'copy'
 
   input:
-  path("*_results.txt")
+  path("*_kleborate.txt")
 
   output:
   file("kleborate_results.txt")
 
   script:
   """
-  awk 'FNR==1 && NR!=1 { while (/^strain/) getline; } 1 {print}' *_results.txt > kleborate_results.txt
+  awk 'FNR==1 && NR!=1 { while (/^strain/) getline; } 1 {print}' *_kleborate.txt > kleborate_results.txt
   """
 }
 
