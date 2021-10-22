@@ -8,7 +8,7 @@ process mlst {
   tuple val(isolate_id), path(fasta_file)
 
   output:
-  path("{$isolate_id}_mlst.txt)
+  path("{$isolate_id}_mlst.txt")
 
   script:
   """

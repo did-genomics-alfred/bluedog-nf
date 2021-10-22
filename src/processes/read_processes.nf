@@ -41,7 +41,7 @@ process assemble {
   tuple val(isolate_id), path(reads_fwd), path(reads_rev)
 
   output:
-  tuple val(isolate_id), path("assembly.fasta"), emit: assembly_fasta
+  tuple val(isolate_id), path("${isolate_id}.fasta"), emit: assembly_fasta
   path("assembly.gfa")
   path("unicycler.log")
 
@@ -49,6 +49,7 @@ process assemble {
   script:
   """
   unicycler -1 ${reads_fwd} -2 ${reads_rev} -o .
+  mv assembly.fasta ${isolate_id}.fasta
   """
 
 }
