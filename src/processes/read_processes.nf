@@ -59,7 +59,7 @@ process assembly_stats {
   publishDir path:{"${params.output_dir}/stats"}, mode: 'copy', saveAs: {filename -> "${isolate_id}_stats.txt"}, pattern: '*.txt'
 
   input:
-  tuple val(isolate_id), path(fasta_file), path(graph_file), path(log_file)
+  tuple val(isolate_id), path(fasta_file)
 
   output:
   path("${isolate_id}_stats.txt")

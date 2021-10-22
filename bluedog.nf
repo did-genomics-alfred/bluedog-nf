@@ -66,7 +66,7 @@ workflow ANALYSE_ASSEMBLIES {
 
   if ( params.run_mlst ) {
     mlst_ch = mlst(assemblies_ch)
-    combine_mlst(mlst_ch)
+    combine_mlst(mlst_ch.collect())
   }
 
 }

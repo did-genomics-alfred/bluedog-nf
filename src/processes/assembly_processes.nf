@@ -8,11 +8,11 @@ process mlst {
   tuple val(isolate_id), path(fasta_file)
 
   output:
-  tuple path("${isolate_id}_mlst.txt"), path("${isolate_id}_ST.txt")
+  path("{$isolate_id}_mlst.txt)
 
   script:
   """
-  mlst --label $isolate_id $fasta_file > ${isolate_id}_mlst.txt | cut -f1,2,3 > ${isolate_id}_ST.txt
+  mlst --label $isolate_id $fasta_file > ${isolate_id}_mlst.txt
   """
 }
 
@@ -22,14 +22,14 @@ process combine_mlst {
   publishDir path:("${params.output_dir}"), mode: 'copy'
 
   input:
-  tuple path("*_mlst.txt"), path("*_ST.txt")
+  path("*_mlst.txt")
 
   output:
   file("mlst_results.txt")
 
   script:
   """
-  cat *_ST.txt > mlst_results.txt
+  cat *_mlst.txt > mlst_results.txt
   """
 }
 
