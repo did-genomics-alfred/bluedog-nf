@@ -14,8 +14,7 @@ include { kleborate;combine_kleborate } from './src/processes/assembly_processes
 
 // Utility functions
 //include { print_splash } from './src/utilities.nf'
-include { check_host;check_output_dir;check_arguments;check_boolean_option } from './src/utilities.nf'
-include { write_param_data_to_run_config } from './src/utilities.nf'
+include { check_host;check_arguments;check_boolean_option } from './src/utilities.nf'
 
 // Parameter checks
 // need to provide either reads OR assemblies, can't have both or neither
@@ -64,7 +63,7 @@ workflow ASSEMBLE_FROM_READS {
 
   main:
 
-  if( read_qc ) {
+  if( run_read_qc ) {
     fastqc_ch = fastqc(reads_pe)
     multiqc(fastqc_ch.collect())
   }
