@@ -34,29 +34,38 @@ process combine_mlst {
 
 process speciator {
   label "short_job"
-  cache 'lenien'
-
+  cache 'lenient'
+  publishDir path:("${params.output_dir}/speciator"), mode: 'copy', pattern: '*_species.txt'
+  
   input:
   tuple val(isolate_id), path(fasta_file)
 
   output:
-  file("species_result.json")
+  file("${isolate_id}_species.txt")
 
   script:
   """
-  singularity run --containall --pwd /bactinspector --bind $PWD/$fasta_file:/bactinspector/input.fasta speciator-3.0.1.sif 2>/dev/null
+  singularity run --containall --pwd /bactinspector --bind $fasta_file:/bactinspector/input.fasta /scratch/js66/jane/speciator_pw/speciator-3.0.1.sif > ${isolate_id}_species.json
+  parse_speciator.py --json ${isolate_id}_species.json --output ${isolate_id}_species.txt
   """
 }
 
-/* Need to comment out the following lines for Kleborate as Kleborate usings the fasta file name
-to determine the identifier that goes in the output file.
-As we are using the raw assembly.fasta outputs from unicycler, all entries when combined are called
-"assembly", which is obviously extremely unhelpful! So not using this for now until we work this out
+process combine_speciator {
+  label "short_job"
+  cache 'lenient'
+  publishDir path:("${params.output_dir}"), mode: 'copy'
 
-Additionally, it is not possible to install Kleborate via conda, due to the reliance on Kaptive.
-Therefore the bluedog environment on M3 will need to have Kleborate installed manually if we want to include this
-*/
+  input:
+  path("*_species.txt")
 
+  output:
+  file("speciator_results.txt")
+
+  script:
+  """
+  awk 'FNR==1 && NR!=1 { while (/^isolate/) getline; } 1 {print}' *_species.txt > speciator_results.txt
+  """
+}
 
 process kleborate {
   label "short_job"

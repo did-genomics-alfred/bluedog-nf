@@ -10,7 +10,7 @@ include { fastqc;multiqc } from './src/processes/read_processes.nf'
 include { assemble;assembly_stats;combine_stats } from './src/processes/read_processes.nf'
 
 include { mlst;combine_mlst } from './src/processes/assembly_processes.nf'
-include {speciator} from './src/processes/assembly_processes.nf'
+include {speciator;combine_speciator} from './src/processes/assembly_processes.nf'
 include { kleborate;combine_kleborate } from './src/processes/assembly_processes.nf'
 
 // Get reads and seperate into pe and se channels based on prefix
@@ -30,8 +30,8 @@ reads_pe = reads_pe.map {
 }
 }
 if (params.assemblies){
-	assemblies = Channel.fromPath(params.assemblies).map {
-	  get_file_id(it)}
+	assemblies = Channel.fromPath(params.assemblies)
+                            .map { file -> tuple(file.simpleName, file) }
 }
 
 workflow ASSEMBLE_FROM_READS {
@@ -61,7 +61,7 @@ workflow ANALYSE_ASSEMBLIES {
   main:
   if (params.run_speciator) {
     species_ch = speciator(assemblies_ch)
-    combine_species(species_ch.collect())
+    combine_speciator(species_ch.collect())
   }
   if ( params.run_kleborate ) {
     kleborate_ch = kleborate(assemblies_ch)
