@@ -11,6 +11,7 @@ include { assemble;assembly_stats;combine_stats } from './src/processes/read_pro
 include { mlst;combine_mlst } from './src/processes/assembly_processes.nf'
 include {speciator;combine_speciator} from './src/processes/assembly_processes.nf'
 include { kleborate;combine_kleborate } from './src/processes/assembly_processes.nf'
+include { amrfinder } from './src/processes/assembly_processes.nf'
 
 // Utility functions
 //include { print_splash } from './src/utilities.nf'
