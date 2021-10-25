@@ -1,8 +1,5 @@
 #!/usr/bin/env nextflow
 
-//ADD ABRITAMR, PROKKA ALTERNATIVE, POSSIBLY SPECIES DETECTOR
-//WORK OUT A WAY TO PROVIDE ASSEMBLIES AS INPUT ALTERNATIVE
-
 nextflow.enable.dsl=2
 
 // Processes to run on reads
@@ -19,10 +16,9 @@ include { kleborate;combine_kleborate } from './src/processes/assembly_processes
 include { check_host;check_output_dir;check_arguments;check_boolean_option } from './src/utilities.nf'
 include { write_param_data_to_run_config } from './src/utilities.nf'
 
-//parameter checks
+// Parameter checks
 // need to provide either reads OR assemblies, can't have both or neither
 check_arguments(params)
-check_output_dir(params)
 //check_host(workflow)
 
 // Require some variables to be boolean
@@ -34,34 +30,43 @@ run_kleborate = check_boolean_option(params.run_kleborate, 'run_kleborate')
 
 // Get reads and seperate into pe and se channels based on prefix
 if (params.reads) {
-reads = Channel.fromPath(params.reads).map {
-    get_read_prefix_and_type(it)
-  }.branch {
-    paired: it[0] == 'pe'
-}
-reads_pe = reads.paired.map { it[1..-1] }.groupTuple()
-// Check that we have the expected number of reads for each prefix in pe and se channels and flatten tuple
-reads_pe = reads_pe.map {
-  if (it[1].size() != 2) {
-    exit 1, "ERROR: didn't get exactly two readsets prefixed with ${it[0]}:\n${it[1]}"
+  reads = Channel.fromPath(params.reads).ifEmpty {
+      exit 1, "ERROR: did not find any read files with '${params.reads}'"
+    }.map {
+      get_read_prefix_and_type(it)
+    }.branch {
+      paired: it[0] == 'pe'
   }
-  [it[0], *it[1]]
+  reads_pe = reads.paired.map { it[1..-1] }.groupTuple()
+  // Check that we have the expected number of reads for each prefix in channel and flatten tuple
+  reads_pe = reads_pe.map {
+    if (it[1].size() != 2) {
+      exit 1, "ERROR: didn't get exactly two readsets prefixed with ${it[0]}:\n${it[1]}"
+    }
+    [it[0], *it[1]]
+  }
 }
-}
+
+// Get assembly files and create tuple with filename + full file path
 if (params.assemblies){
-	assemblies = Channel.fromPath(params.assemblies)
-                            .map { file -> tuple(file.simpleName, file) }
+	assemblies = Channel.fromPath(params.assemblies).ifEmpty {
+    exit 1, "ERROR: did not find any assembly files with '${params.assemblies}'"
+  }.map {
+    file -> tuple(file.simpleName, file) }
 }
 
 // Create run config output file
 write_param_data_to_run_config()
+check_output_dir(params)
 
+// This workflow is for the assembly steps (includes optional FASTQC on read files)
 workflow ASSEMBLE_FROM_READS {
-  //get input data
+
   take:
   read_pairs_ch
+
   main:
-  //fastqc
+
   if( read_qc ) {
     fastqc_ch = fastqc(reads_pe)
     multiqc(fastqc_ch.collect())
@@ -77,9 +82,12 @@ workflow ASSEMBLE_FROM_READS {
 
 }
 
+// This is the workflow for analysing assembly files, all steps optional
 workflow ANALYSE_ASSEMBLIES {
+
   take:
   assemblies_ch
+
   main:
   if ( run_speciator ) {
     species_ch = speciator(assemblies_ch)
@@ -97,8 +105,8 @@ workflow ANALYSE_ASSEMBLIES {
 
 }
 
-//This is the implicit workflow that calls all the others
-workflow{
+// This is the implicit workflow that calls the others, depending on input
+workflow {
   if (params.reads) {
     ASSEMBLE_FROM_READS(reads_pe)
     ANALYSE_ASSEMBLIES(ASSEMBLE_FROM_READS.out)
