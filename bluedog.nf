@@ -13,15 +13,14 @@ include {speciator;combine_speciator} from './src/processes/assembly_processes.n
 include { kleborate;combine_kleborate } from './src/processes/assembly_processes.nf'
 
 // Utility functions
-include { print_splash } from './src/utilities.nf'
+//include { print_splash } from './src/utilities.nf'
 include { check_host;check_output_dir;check_arguments;check_boolean_option } from './src/utilities.nf'
 include { write_param_data_to_run_config } from './src/utilities.nf'
 
 // Parameter checks
 // need to provide either reads OR assemblies, can't have both or neither
-print_splash()
 check_arguments(params)
-//check_host(workflow)
+check_host(workflow)
 
 // Require some variables to be boolean
 // We must check and change values if needed
@@ -56,10 +55,6 @@ if (params.assemblies){
   }.map {
     file -> tuple(file.simpleName, file) }
 }
-
-// Create run config output file
-//write_param_data_to_run_config()
-check_output_dir(params)
 
 // This workflow is for the assembly steps (includes optional FASTQC on read files)
 workflow ASSEMBLE_FROM_READS {
