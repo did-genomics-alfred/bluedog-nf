@@ -36,7 +36,7 @@ process speciator {
   label "short_job"
   cache 'lenient'
   publishDir path:("${params.output_dir}/speciator"), mode: 'copy', pattern: '*_species.txt'
-  
+
   input:
   tuple val(isolate_id), path(fasta_file)
 
@@ -45,7 +45,7 @@ process speciator {
 
   script:
   """
-  singularity run --containall --pwd /bactinspector --bind $fasta_file:/bactinspector/input.fasta /scratch/js66/jane/speciator_pw/speciator-3.0.1.sif > ${isolate_id}_species.json
+  singularity run --containall --pwd /bactinspector --bind $fasta_file:/bactinspector/input.fasta speciator-3.0.1.sif > ${isolate_id}_species.json
   parse_speciator.py --json ${isolate_id}_species.json --output ${isolate_id}_species.txt
   """
 }
@@ -70,7 +70,7 @@ process combine_speciator {
 process kleborate {
   label "short_job"
   cache 'lenient'
-  publishDir path:("${params.output_dir}/kleborate"), mode: 'copy', saveAs: {filename -> "${isolate_id}_kleborate.txt"}, pattern: '*_kleborate.txt'  
+  publishDir path:("${params.output_dir}/kleborate"), mode: 'copy', saveAs: {filename -> "${isolate_id}_kleborate.txt"}, pattern: '*_kleborate.txt'
 
   input:
   tuple val(isolate_id), path(fasta_file)
@@ -100,4 +100,3 @@ process combine_kleborate {
   awk 'FNR==1 && NR!=1 { while (/^strain/) getline; } 1 {print}' *_kleborate.txt > kleborate_results.txt
   """
 }
-
