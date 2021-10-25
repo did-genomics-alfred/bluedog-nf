@@ -16,7 +16,7 @@ include {speciator;combine_speciator} from './src/processes/assembly_processes.n
 include { kleborate;combine_kleborate } from './src/processes/assembly_processes.nf'
 
 // Utility functions
-include { check_host;check_output_dir;check_arguments } from './src/utilities.nf'
+include { check_host;check_output_dir;check_arguments;check_boolean_option } from './src/utilities.nf'
 include { write_param_data_to_run_config } from './src/utilities.nf'
 
 //parameter checks

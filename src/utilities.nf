@@ -15,8 +15,8 @@ def check_output_dir(params) {
   output_dir_files = []
   output_dir = file(params.output_dir)
   output_dir.eachFile { output_dir_files.add(it.name) }
-  run_info_dirname = file(params.run_info_dir).simpleName
-  output_dir_files.remove(run_info_dirname)
+  //run_info_dirname = file(params.run_info_dir).simpleName
+  //output_dir_files.remove(run_info_dirname)
   if (output_dir_files.size() > 0 && ! params.force) {
     exit 1, "ERROR: output directory '${output_dir}' already exists and contains other files, remove or use --force to overwrite"
   }
@@ -24,10 +24,10 @@ def check_output_dir(params) {
 
 def check_arguments(params) {
   // Check required input and outputs
-  if (! params.reads) && (! params.assemblies) {
+  if (! params.reads && ! params.assemblies) {
     exit 1, "ERROR: Either 'reads' or 'assemblies' must be set in nextflow.config"
   }
-  if (params.reads) && (params.assemblies){
+  if (params.reads && params.assemblies){
     exit 1, "ERROR: Cannot set both 'reads' and 'assemblies' in nextflow.config, must choose one"
   }
   if (! params.output_dir) {
