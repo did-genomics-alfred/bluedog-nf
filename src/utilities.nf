@@ -1,8 +1,9 @@
 /* Note that these functions are drawn from Stephen Watt's functions in RedDog https://github.com/scwatts/reddog-nf/blob/master/src/utilities.nf */
 
 def print_splash() {
-  log.info('-------------------------------------')
+  log.info('----------------------------------------------------------------------------------')
   log.info("""
+  ‌‌
 
 88           88                                    88
 88           88                                    88
@@ -14,8 +15,9 @@ def print_splash() {
 8Y"Ybbd8"'   88   `"YbbdP'Y8   `"Ybbd8"'   `"8bbdP"Y8   `"YbbdP"'    `"YbbdP"Y8
                                                                      aa,    ,88
                                                                       "Y8bbdP"   
-""").stripIndent()
-log.info('-------------------------------------')
+  ‌‌
+  """.stripIndent())
+  log.info('----------------------------------------------------------------------------------')
 }
 
 def check_host(workflow) {
