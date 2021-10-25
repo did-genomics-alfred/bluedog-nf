@@ -100,3 +100,27 @@ process combine_kleborate {
   awk 'FNR==1 && NR!=1 { while (/^strain/) getline; } 1 {print}' *_kleborate.txt > kleborate_results.txt
   """
 }
+
+process amrfinder {
+  label "short_job"
+  cache 'lenient'
+  publishDir path:("${params.output_dir}/amrfinder"), mode: 'copy'
+
+  input:
+  tuple val(isolate_id), path(fasta_file)
+
+  output:
+  path("*_amr_results.txt")
+
+  script:
+  if (params.amr_organism){
+    """
+    amrfinder -n $fasta_file --plus -o ${params.organism} > ${isolate_id}_amr_results.txt
+    """
+  }
+  else {
+    """
+    amrfinder -n $fasta_file --plus > ${isolate_id}_amr_results.txt
+    """
+  }
+}

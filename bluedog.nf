@@ -27,6 +27,7 @@ run_read_qc = check_boolean_option(params.read_qc, 'read_qc')
 run_speciator = check_boolean_option(params.run_speciator, 'run_speciator')
 run_mlst = check_boolean_option(params.run_mlst, 'run_mlst')
 run_kleborate = check_boolean_option(params.run_kleborate, 'run_kleborate')
+run_amrfinder = check_boolean_option(params.run_amr, 'run_amr')
 
 // Get reads and seperate into pe and se channels based on prefix
 if (params.reads) {
@@ -97,6 +98,9 @@ workflow ANALYSE_ASSEMBLIES {
   if ( run_mlst ) {
     mlst_ch = mlst(assemblies_ch)
     combine_mlst(mlst_ch.collect())
+  }
+  if ( run_amrfinder ) {
+    amrfinder(assemblies_ch)
   }
 
 }
