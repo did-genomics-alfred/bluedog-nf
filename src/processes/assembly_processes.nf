@@ -45,7 +45,7 @@ process speciator {
 
   script:
   """
-  singularity run --containall --pwd /bactinspector --bind $fasta_file:/bactinspector/input.fasta /projects/js66/software/speciator/speciator-3.0.1.sif > ${isolate_id}_species.json
+  singularity run --containall --pwd /bactinspector --bind $fasta_file:/bactinspector/input.fasta /projects/cn64/software/speciator/speciator-3.0.1.sif > ${isolate_id}_species.json
   parse_speciator.py --json ${isolate_id}_species.json --output ${isolate_id}_species.txt
   """
 }
