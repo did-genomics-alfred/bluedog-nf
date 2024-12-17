@@ -25,6 +25,7 @@ check_host(workflow)
 // Require some variables to be boolean
 // We must check and change values if needed
 run_read_qc = check_boolean_option(params.read_qc, 'read_qc')
+run_stats = check_boolean_option(params.run_stats, 'read_qc')
 run_speciator = check_boolean_option(params.run_speciator, 'run_speciator')
 run_mlst = check_boolean_option(params.run_mlst, 'run_mlst')
 run_kleborate = check_boolean_option(params.run_kleborate, 'run_kleborate')
@@ -87,8 +88,17 @@ workflow ANALYSE_ASSEMBLIES {
   assemblies_ch
 
   main:
+  // perform stats on the assemblies if the user wishes (useful if assemblies have come from elsewhere)
+  if ( run_stats ) {
+    stats_ch = assembly_stats(assemblies_ch)
+    combine_stats(stats_ch.collect())
+  }
+
   if ( run_speciator ) {
     species_ch = speciator(assemblies_ch)
+    // Capture the outputs
+    species_ch.view { file, species -> 
+    println "File: ${file}, Species: ${species}"
     combine_speciator(species_ch.collect())
   }
   if ( run_kleborate ) {

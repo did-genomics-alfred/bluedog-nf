@@ -42,13 +42,18 @@ process speciator {
 
   output:
   file("${isolate_id}_species.txt")
+  val extracted_species
 
   script:
   """
   singularity run --containall --pwd /bactinspector --bind $fasta_file:/bactinspector/input.fasta /projects/cn64/software/speciator/speciator-3.0.1.sif > ${isolate_id}_species.json
   parse_speciator.py --json ${isolate_id}_species.json --output ${isolate_id}_species.txt
+  extracted_species=\$(sed -n '2p' ${isolate_id}_species.txt | cut -f2)
+  # Print the string so Nextflow can capture it as output
+  echo \$extracted_species
   """
 }
+
 
 process combine_speciator {
   label "short_job"
