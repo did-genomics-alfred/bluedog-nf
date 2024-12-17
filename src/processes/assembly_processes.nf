@@ -120,7 +120,7 @@ process amrfinder {
   script:
   if (params.amr_organism){
     """
-    amrfinder -n $fasta_file --plus -o ${params.organism} --print_node --name $isolate_id > ${isolate_id}_amr_results.txt
+    amrfinder -n $fasta_file --plus --print_node --organism ${params.amr_organism} --name $isolate_id > ${isolate_id}_amr_results.txt
     """
   }
   else {
